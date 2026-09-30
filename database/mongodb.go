@@ -10,6 +10,16 @@ import (
 
 const (
 	UsersCollection = "users"
+	RolesCollection = "roles"
+	MoviesCollection = "movies"
+	TheatresCollection = "theatres"
+	ScreensCollection = "screens"
+	SeatsCollection = "seats"
+	ShowsCollection = "shows"
+	BookingsCollection = "bookings"
+	BookingSeatsCollection = "booking_seats"
+	PaymentsCollection = "payments"
+	ReviewsCollection = "reviews"
 )
 
 var DB *mongo.Database
