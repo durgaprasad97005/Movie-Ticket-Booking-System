@@ -15,7 +15,7 @@ func main() {
 	database.ConnectMongo(cfg.MongoUri, cfg.DbName)
 
 	// Initialize new app
-	app := SetupApp()
+	app := SetupApp(cfg)
 
 	// Listen at a given port
 	// log.Println(cfg.Port)
