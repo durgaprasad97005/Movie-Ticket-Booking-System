@@ -14,6 +14,9 @@ func NewAuthRoutes(app fiber.Router) {
 	handler := handlers.NewAuthHandler(service)
 
 	// Initialize routes
-	newApp := app.Group("/user")
-	newApp.Post("/create", handler.Create)
+	newApp := app.Group("/auth")
+	newApp.Post("/register", handler.Register)
+	newApp.Post("/login", handler.Login)
+	newApp.Post("/refresh", handler.Refresh)
+	newApp.Post("/logout", handler.Logout)
 }

@@ -1,8 +1,11 @@
 package handlers
 
 import (
+	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/dto"
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/services"
+	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/utils"
 	"github.com/gofiber/fiber/v3"
+	"github.com/go-playground/validator/v10"
 )
 
 type AuthHandler struct {
@@ -16,8 +19,31 @@ func NewAuthHandler(serv *services.AuthService) *AuthHandler {
 }
 
 // Create user
-func (handler *AuthHandler) Create(ctx fiber.Ctx) error {
-	return ctx.Status(201).JSON(fiber.Map{
-		"message": "User created successfully",
-	})
+func (handler *AuthHandler) Register(ctx fiber.Ctx) error {
+	// parse the request
+	var form dto.UserRequest
+	if err := ctx.Bind().Body(&form); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Invalid data", err),
+		)
+	}
+
+	// validate the request payload
+	validate := validator.New()
+	if err := validate.Struct(&form); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Invalid data", err),
+		)
+	}
+
+	user, err := handler.service.Register(form)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Unable to create user", err), 
+		)
+	}
+
+	return ctx.Status(fiber.StatusCreated).JSON(
+		utils.SuccessResponse("User created successfully", user), 
+	)
 }
