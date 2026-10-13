@@ -12,11 +12,13 @@ import (
 
 type AuthRepository struct {
 	collection *mongo.Collection // users collection
+	refreshTokensCollection *mongo.Collection
 }
 
 func NewAuthRepository() *AuthRepository {
 	return &AuthRepository{
 		collection: database.Collection(database.UsersCollection),
+		refreshTokensCollection: database.Collection(database.RefreshTokensCollection),
 	}
 }
 
@@ -32,13 +34,24 @@ func (repository *AuthRepository) Count(mail string) (int64, error) {
 }
 
 // Insert a single user
-func (repository *AuthRepository) Insert(user *models.UserModel) error {
+func (repository *AuthRepository) InsertUser(user *models.UserModel) error {
 	result, err := repository.collection.InsertOne(context.TODO(), user)
 	if err != nil {
 		return err
 	}
 
 	user.Id = result.InsertedID.(bson.ObjectID)
+	return nil
+}
+
+// Insert a single Token
+func (repository *AuthRepository) InsertToken(token *models.JWTRegreshTokenModel) error {
+	result, err := repository.refreshTokensCollection.InsertOne(context.TODO(), token)
+	if err != nil {
+		return err
+	}
+
+	token.Id = result.InsertedID.(bson.ObjectID)
 	return nil
 }
 

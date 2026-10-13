@@ -7,12 +7,16 @@ import (
 )
 
 type DocumentId struct {
-	Id bson.ObjectID `json:"id" bson:"_id"`
+	Id bson.ObjectID `json:"id" bson:"_id,omitempty"`
+}
+
+type CreatedAtTime struct {
+	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
 }
 
 type DocumentTime struct {
-	CreatedAt time.Time `json:"createdAt" bson:"createdAt"`
-	UpdatedAt time.Time `json:"updatedAt" bson:"updatedAt"`
+	CreatedAtTime `json:",inline" bson:",inline"`
+	UpdatedAt     time.Time `json:"updatedAt" bson:"updatedAt"`
 }
 
 func (documentTime *DocumentTime) Defaults() {

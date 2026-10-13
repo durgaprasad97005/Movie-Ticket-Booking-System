@@ -20,6 +20,7 @@ const (
 	BookingSeatsCollection = "booking_seats"
 	PaymentsCollection = "payments"
 	ReviewsCollection = "reviews"
+	RefreshTokensCollection = "refresh_tokens"
 )
 
 var DB *mongo.Database

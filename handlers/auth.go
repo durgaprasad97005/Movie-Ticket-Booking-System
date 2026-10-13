@@ -4,8 +4,8 @@ import (
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/dto"
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/services"
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/utils"
-	"github.com/gofiber/fiber/v3"
 	"github.com/go-playground/validator/v10"
+	"github.com/gofiber/fiber/v3"
 )
 
 type AuthHandler struct {
@@ -36,7 +36,7 @@ func (handler *AuthHandler) Register(ctx fiber.Ctx) error {
 		)
 	}
 
-	user, err := handler.service.Register(form)
+	response, err := handler.service.Register(form)
 	if err != nil {
 		return ctx.Status(fiber.StatusBadRequest).JSON(
 			utils.ErrorResponse("Unable to create user", err), 
@@ -44,6 +44,6 @@ func (handler *AuthHandler) Register(ctx fiber.Ctx) error {
 	}
 
 	return ctx.Status(fiber.StatusCreated).JSON(
-		utils.SuccessResponse("User created successfully", user), 
+		utils.SuccessResponse("User creation successful", response), 
 	)
 }

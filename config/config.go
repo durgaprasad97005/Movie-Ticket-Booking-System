@@ -11,6 +11,7 @@ type Config struct {
 	Port string
 	MongoUri string
 	DbName string
+	JWTSecret string
 }
 
 func Load() *Config {
@@ -19,8 +20,9 @@ func Load() *Config {
 	}
 
 	return &Config{
-		Port: os.Getenv("PORT"),
-		MongoUri: os.Getenv("MONGO_URI"),
-		DbName: os.Getenv("DB_NAME"),
+		Port: os.Getenv("PORT"), 
+		MongoUri: os.Getenv("MONGO_URI"), 
+		DbName: os.Getenv("DB_NAME"), 
+		JWTSecret: os.Getenv("JWT_SECRET"),
 	}
 }

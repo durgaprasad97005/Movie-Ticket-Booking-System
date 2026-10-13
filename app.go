@@ -23,7 +23,7 @@ func SetupApp(cfg *config.Config) *fiber.App {
 	})
 
 	// Initialize routes
-	routes.SetupRoutes(app)
+	routes.SetupRoutes(app, cfg)
 
 	return app
 }
