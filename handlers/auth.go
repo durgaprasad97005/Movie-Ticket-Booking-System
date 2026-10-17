@@ -107,3 +107,33 @@ func (handler *AuthHandler) Refresh(ctx fiber.Ctx) error {
 		utils.SuccessResponse("Access token creation successful", response), 
 	)
 }
+
+// Logout user
+func (handler *AuthHandler) Logout(ctx fiber.Ctx) error {
+	// parse the request
+	var form dto.JWTRequest
+	if err := ctx.Bind().Body(&form); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Invalid data", err),
+		)
+	}
+
+	// validate the request payload
+	validate := validator.New()
+	if err := validate.Struct(&form); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Invalid data", err),
+		)
+	}
+
+	err := handler.service.Logout(form)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Logout failed", err), 
+		)
+	}
+
+	return ctx.Status(fiber.StatusCreated).JSON(
+		utils.SuccessResponse("Logout successful", nil), 
+	)
+}

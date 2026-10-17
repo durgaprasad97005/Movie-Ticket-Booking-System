@@ -90,3 +90,20 @@ func (repository *AuthRepository) GetUserSessionByRefreshToken(refreshToken stri
 
 	return &userSession, nil
 }
+
+// Update user session
+func (repository *AuthRepository) UpdateUserSession(refreshToken string, fields bson.M) error {
+	if refreshToken == "" {
+		return errors.ErrInvalidCredentials
+	}
+
+	result, err := repository.userSessionsCollection.UpdateOne(context.TODO(), bson.M{"refreshToken": refreshToken}, bson.M{"$set": fields})
+	if err != nil {
+		return err
+	}
+	if result.MatchedCount == 0 || result.ModifiedCount == 0 {
+		return errors.ErrUserSessionNotFound
+	}
+
+	return nil
+}

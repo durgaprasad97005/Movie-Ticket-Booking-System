@@ -198,6 +198,25 @@ func (service *AuthService) Refresh(form dto.JWTRequest) (*dto.JWTResponse, erro
 	return &tokenResponse, nil
 }
 
+// Logout user
+func (service *AuthService) Logout(form dto.JWTRequest) error {
+	// Check the expiry time of the refresh token
+	refreshToken, err := jwt.Parse(form.RefreshToken, func(t *jwt.Token) (any, error) {
+		return service.config.JWTSecret, nil
+	})
+	if err != nil {
+		return err
+	}
+	if !refreshToken.Valid {
+		return errors.ErrExpiredToken
+	}
+	
+	// Update existing userSession
+	err = service.repository.UpdateUserSession(form.RefreshToken, bson.M{"revokedAt": time.Now()})
+	
+	return err
+}
+
 //-------------------------- Reusable functions -----------------------//
 
 func CreateTokens(objId bson.ObjectID, jwtSecret string) (string, string, error) {
