@@ -5,6 +5,7 @@ import (
 
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/config"
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/dto"
+	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/errors"
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/models"
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/repositories"
 	"github.com/golang-jwt/jwt/v5"
@@ -26,8 +27,12 @@ func NewAuthService(repo *repositories.AuthRepository, cfg *config.Config) *Auth
 // Create User
 func (service *AuthService) Register(form dto.UserRequest) (*dto.JWTResponse, error) {
 	// Check whether there exists another user
-	if _, err := service.repository.Count(form.Email); err != nil {
+	count, err := service.repository.Count(form.Email)
+	if err != nil {
 		return nil, err
+	}
+	if count > 0 {
+		return nil, errors.ErrDuplicateUserFound
 	}
 
 	// Hash password
@@ -36,22 +41,107 @@ func (service *AuthService) Register(form dto.UserRequest) (*dto.JWTResponse, er
 		return nil, err
 	}
 
-	// Create user model
+	// Create user 
 	user := models.UserModel{
-		Name:     form.Name,
-		Email:    form.Email,
-		Phone:    form.Phone,
-		Password: string(passwordHash),
-		Role:     form.Role,
-		IsActive: form.IsActive,
+		Name:         form.Name,
+		Email:        form.Email,
+		Phone:        form.Phone,
+		PasswordHash: string(passwordHash),
+		Role:         form.Role,
+		IsActive:     form.IsActive,
 	}
 	user.DocumentTime.Defaults()
 
-	// Insert user
 	if err := service.repository.InsertUser(&user); err != nil {
 		return nil, err
 	}
 
+	// Create tokens
+	refreshToken, accessToken, err := CreateTokens(&user, service.config.JWTSecret)
+	if err != nil {
+		return nil, err
+	}
+	if refreshToken == "" || accessToken == "" {
+		return nil, errors.ErrInvalidTokens
+	}
+
+	now := time.Now()
+
+	// Create session
+	token := models.UserSessionModel{}
+	token.UserId = user.Id
+	token.RefreshTokenHash = refreshToken // need to store the hash instead of jwtRefresh token itself - future enhancement
+	token.ExpiresAt = now.Add(7 * 24 * time.Hour)
+	token.RevokedAt = nil
+	token.CreatedAt = now
+
+	if err := service.repository.InsertUserSession(&token); err != nil {
+		return nil, err
+	}
+
+	tokenResponse := dto.JWTResponse{}
+	tokenResponse.RefreshToken = refreshToken
+	tokenResponse.AccessToken = accessToken
+
+	return &tokenResponse, nil
+}
+
+// Login User
+func (service *AuthService) Login(form dto.UserLoginRequest) (*dto.JWTResponse, error) {
+	// Check whether user exists
+	count, err := service.repository.Count(form.Email)
+	if err != nil {
+		return nil, err
+	}
+	if count == 0 {
+		return nil, errors.ErrUserNotFound
+	}
+
+	// Get user by email
+	user, err := service.repository.GetUserByEmail(form.Email)
+	if err != nil {
+		return nil, err
+	}
+
+	// Compare the password hash
+	err = bcrypt.CompareHashAndPassword([]byte(user.PasswordHash), []byte(form.Password))
+	if err != nil {
+		return nil, err
+	}
+
+	// Create tokens
+	refreshToken, accessToken, err := CreateTokens(user, service.config.JWTSecret)
+	if err != nil {
+		return nil, err
+	}
+	if refreshToken == "" || accessToken == "" {
+		return nil, errors.ErrInvalidTokens
+	}
+
+	now := time.Now()
+
+	// Create session
+	token := models.UserSessionModel{}
+	token.UserId = user.Id
+	token.RefreshTokenHash = refreshToken // need to store the hash instead of jwtRefresh token itself - future enhancement
+	token.ExpiresAt = now.Add(7 * 24 * time.Hour)
+	token.RevokedAt = nil
+	token.CreatedAt = now
+
+	if err := service.repository.InsertUserSession(&token); err != nil {
+		return nil, err
+	}
+
+	tokenResponse := dto.JWTResponse{}
+	tokenResponse.RefreshToken = refreshToken
+	tokenResponse.AccessToken = accessToken
+
+	return &tokenResponse, nil
+}
+
+//-------------------------- Reusable functions -----------------------//
+
+func CreateTokens(user *models.UserModel, jwtSecret string) (string, string, error) {
 	now := time.Now()
 
 	// Refresh token
@@ -61,9 +151,9 @@ func (service *AuthService) Register(form dto.UserRequest) (*dto.JWTResponse, er
 		"exp": now.Add(7 * 24 * time.Hour).Unix(),
 	})
 
-	jwtRefresh, err := refreshToken.SignedString(service.config.JWTSecret)
+	jwtRefresh, err := refreshToken.SignedString(jwtSecret)
 	if err != nil {
-		return nil, err // user created but unable to create refresh token
+		return "", "", err // user created but unable to create refresh token
 	}
 
 	// Access token
@@ -73,26 +163,10 @@ func (service *AuthService) Register(form dto.UserRequest) (*dto.JWTResponse, er
 		"exp": now.Add(15 * time.Minute).Unix(),
 	})
 
-	jwtAccess, err := accessToken.SignedString(service.config.JWTSecret)
+	jwtAccess, err := accessToken.SignedString(jwtSecret)
 	if err != nil {
-		return nil, err // user created but unable to create access token
+		return jwtRefresh, "", err // user created but unable to create access token
 	}
 
-	// Create refreshTokens model
-	token := models.JWTRegreshTokenModel{}
-	token.UserId = user.Id
-	token.TokenHash = jwtRefresh
-	token.ExpiresAt = now.Add(7 * 24 * time.Hour)
-	token.CreatedAt = now
-
-	// Insert refresh token
-	if err := service.repository.InsertToken(&token); err != nil {
-		return nil, err
-	}
-
-	tokenResponse := dto.JWTResponse{}
-	tokenResponse.RefreshToken = jwtRefresh
-	tokenResponse.AccessToken = jwtAccess
-
-	return &tokenResponse, nil
+	return jwtRefresh, jwtAccess, nil
 }

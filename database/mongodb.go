@@ -20,7 +20,8 @@ const (
 	BookingSeatsCollection = "booking_seats"
 	PaymentsCollection = "payments"
 	ReviewsCollection = "reviews"
-	RefreshTokensCollection = "refresh_tokens"
+	// RefreshTokensCollection = "refresh_tokens"
+	UserSessionsCollection = "user_sessions"
 )
 
 var DB *mongo.Database
@@ -36,6 +37,8 @@ func ConnectMongo(mongoUri string, dbName string) {
 	}
 
 	DB = client.Database(dbName)
+
+	// Create indexes for the user_sessions to use TTL feature for automated cleanup
 }
 
 func Collection(coll string) *mongo.Collection {

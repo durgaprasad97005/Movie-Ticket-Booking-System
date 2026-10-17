@@ -7,7 +7,7 @@ type UserModel struct {
 	Name         string                 `bson:"name"`
 	Email        string                 `bson:"email"`
 	Phone        string                 `bson:"phone"`
-	Password     string                 `bson:"password"`
+	PasswordHash string                 `bson:"passwordHash"`
 	Role         constants.UserRoleEnum `bson:"role"`
 	IsActive     bool                   `bson:"isActive"`
 	DocumentTime `json:",inline" bson:",inline"`

@@ -12,13 +12,13 @@ import (
 
 type AuthRepository struct {
 	collection *mongo.Collection // users collection
-	refreshTokensCollection *mongo.Collection
+	userSessionsCollection *mongo.Collection
 }
 
 func NewAuthRepository() *AuthRepository {
 	return &AuthRepository{
 		collection: database.Collection(database.UsersCollection),
-		refreshTokensCollection: database.Collection(database.RefreshTokensCollection),
+		userSessionsCollection: database.Collection(database.UserSessionsCollection),
 	}
 }
 
@@ -45,8 +45,8 @@ func (repository *AuthRepository) InsertUser(user *models.UserModel) error {
 }
 
 // Insert a single Token
-func (repository *AuthRepository) InsertToken(token *models.JWTRegreshTokenModel) error {
-	result, err := repository.refreshTokensCollection.InsertOne(context.TODO(), token)
+func (repository *AuthRepository) InsertUserSession(token *models.UserSessionModel) error {
+	result, err := repository.userSessionsCollection.InsertOne(context.TODO(), token)
 	if err != nil {
 		return err
 	}
