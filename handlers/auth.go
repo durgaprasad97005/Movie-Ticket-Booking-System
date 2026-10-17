@@ -77,3 +77,33 @@ func (handler *AuthHandler) Login(ctx fiber.Ctx) error {
 		utils.SuccessResponse("User login successful", response), 
 	)
 }
+
+// Refresh access token
+func (handler *AuthHandler) Refresh(ctx fiber.Ctx) error {
+	// parse the request
+	var form dto.JWTRequest
+	if err := ctx.Bind().Body(&form); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Invalid data", err),
+		)
+	}
+
+	// validate the request payload
+	validate := validator.New()
+	if err := validate.Struct(&form); err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Invalid data", err),
+		)
+	}
+
+	response, err := handler.service.Refresh(form)
+	if err != nil {
+		return ctx.Status(fiber.StatusBadRequest).JSON(
+			utils.ErrorResponse("Access token creation failed", err), 
+		)
+	}
+
+	return ctx.Status(fiber.StatusCreated).JSON(
+		utils.SuccessResponse("Access token creation successful", response), 
+	)
+}

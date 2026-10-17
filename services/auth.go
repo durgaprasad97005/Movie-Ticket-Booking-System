@@ -9,6 +9,7 @@ import (
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/models"
 	"github.com/durgaprasad97005/Movie-Ticket-Booking-System/repositories"
 	"github.com/golang-jwt/jwt/v5"
+	"go.mongodb.org/mongo-driver/v2/bson"
 	"golang.org/x/crypto/bcrypt"
 )
 
@@ -57,7 +58,7 @@ func (service *AuthService) Register(form dto.UserRequest) (*dto.JWTResponse, er
 	}
 
 	// Create tokens
-	refreshToken, accessToken, err := CreateTokens(&user, service.config.JWTSecret)
+	refreshToken, accessToken, err := CreateTokens(user.Id, service.config.JWTSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -110,7 +111,7 @@ func (service *AuthService) Login(form dto.UserLoginRequest) (*dto.JWTResponse, 
 	}
 
 	// Create tokens
-	refreshToken, accessToken, err := CreateTokens(user, service.config.JWTSecret)
+	refreshToken, accessToken, err := CreateTokens(user.Id, service.config.JWTSecret)
 	if err != nil {
 		return nil, err
 	}
@@ -139,14 +140,72 @@ func (service *AuthService) Login(form dto.UserLoginRequest) (*dto.JWTResponse, 
 	return &tokenResponse, nil
 }
 
+// Refresh access token
+func (service *AuthService) Refresh(form dto.JWTRequest) (*dto.JWTResponse, error) {
+	// Check the expiry time of the refresh token
+	refreshToken, err := jwt.Parse(form.RefreshToken, func(t *jwt.Token) (any, error) {
+		return service.config.JWTSecret, nil
+	})
+	if err != nil {
+		return nil, err
+	}
+	if !refreshToken.Valid {
+		return nil, errors.ErrExpiredToken
+	}
+	claims := refreshToken.Claims
+	
+	// Get existing user session
+	userSession, err := service.repository.GetUserSessionByRefreshToken(form.RefreshToken)
+	if err != nil {
+		return nil, err
+	}
+
+	// Check whether revoked
+	if userSession.RevokedAt != nil {
+		return nil, errors.ErrExpiredToken
+	}
+
+	if userSession.ExpiresAt.Unix() < time.Now().Unix() {
+		return nil, errors.ErrExpiredToken
+	}
+
+	// Create tokens
+	id, err := claims.GetSubject()
+	if err != nil {
+		return nil, err
+	}
+	if id == "" {
+		return nil, errors.ErrInvalidCredentials
+	}
+
+	objId, err := bson.ObjectIDFromHex(id)
+	if err != nil {
+		return nil, err
+	}
+
+	_, accessToken, err := CreateTokens(objId, service.config.JWTSecret)
+	if err != nil {
+		return nil, err
+	}
+	if accessToken == "" {
+		return nil, errors.ErrInvalidTokens
+	}
+
+	tokenResponse := dto.JWTResponse{}
+	// tokenResponse.RefreshToken = refreshToken
+	tokenResponse.AccessToken = accessToken
+
+	return &tokenResponse, nil
+}
+
 //-------------------------- Reusable functions -----------------------//
 
-func CreateTokens(user *models.UserModel, jwtSecret string) (string, string, error) {
+func CreateTokens(objId bson.ObjectID, jwtSecret string) (string, string, error) {
 	now := time.Now()
 
 	// Refresh token
 	refreshToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.Id.Hex(),
+		"sub": objId.Hex(),
 		"iat": now.Unix(),
 		"exp": now.Add(7 * 24 * time.Hour).Unix(),
 	})
@@ -158,7 +217,7 @@ func CreateTokens(user *models.UserModel, jwtSecret string) (string, string, err
 
 	// Access token
 	accessToken := jwt.NewWithClaims(jwt.SigningMethodHS256, jwt.MapClaims{
-		"sub": user.Id.Hex(),
+		"sub": objId.Hex(),
 		"iat": now.Unix(),
 		"exp": now.Add(15 * time.Minute).Unix(),
 	})

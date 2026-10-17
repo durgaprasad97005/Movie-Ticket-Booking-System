@@ -1,6 +1,10 @@
 package dto
 
+type JWTRequest struct {
+	RefreshToken string `json:"refreshToken" validate:"required"`
+}
+
 type JWTResponse struct {
-	RefreshToken string `json:"refreshToken"`
-	AccessToken  string `json:"accessToken"`
+	JWTRequest  `json:",inline"`
+	AccessToken string `json:"accessToken"`
 }

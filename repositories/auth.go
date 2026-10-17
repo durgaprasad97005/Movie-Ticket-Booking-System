@@ -35,6 +35,10 @@ func (repository *AuthRepository) Count(mail string) (int64, error) {
 
 // Insert a single user
 func (repository *AuthRepository) InsertUser(user *models.UserModel) error {
+	if user == nil {
+		return errors.ErrInvalidCredentials
+	}
+
 	result, err := repository.collection.InsertOne(context.TODO(), user)
 	if err != nil {
 		return err
@@ -46,6 +50,10 @@ func (repository *AuthRepository) InsertUser(user *models.UserModel) error {
 
 // Insert a single Token
 func (repository *AuthRepository) InsertUserSession(token *models.UserSessionModel) error {
+	if token == nil {
+		return errors.ErrInvalidCredentials
+	}
+
 	result, err := repository.userSessionsCollection.InsertOne(context.TODO(), token)
 	if err != nil {
 		return err
@@ -67,4 +75,18 @@ func (repository *AuthRepository) GetUserByEmail(mail string) (*models.UserModel
 	}
 
 	return &user, nil
+}
+
+// Get user session by refreshToken
+func (repository *AuthRepository) GetUserSessionByRefreshToken(refreshToken string) (*models.UserSessionModel, error) {
+	if refreshToken == "" {
+		return nil, errors.ErrInvalidCredentials
+	}
+
+	var userSession models.UserSessionModel
+	if err := repository.userSessionsCollection.FindOne(context.TODO(), bson.M{"refreshToken": refreshToken}).Decode(&userSession); err != nil {
+		return nil, err
+	}
+
+	return &userSession, nil
 }
